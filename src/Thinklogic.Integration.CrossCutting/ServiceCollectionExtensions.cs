@@ -9,9 +9,29 @@ namespace Thinklogic.Integration.CrossCutting
 {
     public static class ServiceCollectionExtensions
     {
+        public static IServiceCollection AddConfigurations(this IServiceCollection services)
+        {
+            services.AddSingleton(typeof(DataAppSettings), GetSettings());
+
+            return services;
+        }
+
+        private static DataAppSettings GetSettings()
+        {
+            DataAppSettings settings = new();
+
+            foreach (var setting in settings.GetType().GetProperties())
+            {
+                setting.SetValue(settings, Environment.GetEnvironmentVariable(setting.Name));
+            }
+
+            return settings;
+        }
+
         public static IServiceCollection AddGateways(this IServiceCollection services)
         {
             services.AddScoped<IAsanaProjectsGateway, AsanaProjectsGateway>();
+            services.AddScoped<IAsanaWorkspacesGateway, AsanaWorkspacesGateway>();
 
             return services;
         }
@@ -23,9 +43,12 @@ namespace Thinklogic.Integration.CrossCutting
                     client =>
                     {
                         var provider = services.BuildServiceProvider();
-                        var apiSettings = provider.GetService<ApiSettings>();
+                        var dataAppSettings = provider.GetService<DataAppSettings>();
 
-                        client.BaseAddress = new Uri(apiSettings.UrlAsana);
+                        client.BaseAddress = new Uri(dataAppSettings.UrlAsana);
+
+                        client.DefaultRequestHeaders.Add("Authorization", $"Bearer {dataAppSettings.AsanaPersonalAccessToken}");
+
                         client.DefaultRequestHeaders.Accept.Clear();
                         client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                     })

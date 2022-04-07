@@ -46,12 +46,7 @@ namespace Thinklogic.Integration.Infrastructure.Gateways
                 HttpResponseMessage clientResponse = await client.GetAsync(url, cancellationToken);
                 responseContent = await clientResponse.Content.ReadAsStringAsync(cancellationToken);
 
-                if (typeof(TResponse).IsValueType)
-                {
-                    return JsonConvert.DeserializeObject<TResponse>(responseContent, JsonSettings);
-                }
-
-                return (TResponse)(object)responseContent;
+                return JsonConvert.DeserializeObject<TResponse>(responseContent, JsonSettings);
             }
             catch (Exception ex)
             {
