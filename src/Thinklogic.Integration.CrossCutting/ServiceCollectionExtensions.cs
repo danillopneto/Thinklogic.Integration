@@ -4,28 +4,26 @@ using System.Net.Http.Headers;
 using Thinklogic.Integration.Infrastructure.Configurations;
 using Thinklogic.Integration.Infrastructure.Gateways.Asana;
 using Thinklogic.Integration.Interfaces.Gateways.Asana;
+using Thinklogic.Integration.Interfaces.UseCases.Asana;
+using Thinklogic.Integration.UseCases.Profiles;
+using Thinklogic.Integration.UseCases.Services;
 
 namespace Thinklogic.Integration.CrossCutting
 {
     public static class ServiceCollectionExtensions
     {
+        public static IServiceCollection SetupAutoMapper(this IServiceCollection services)
+        {
+            services.AddAutoMapper(typeof(AsanaProfile));
+
+            return services;
+        }
+
         public static IServiceCollection AddConfigurations(this IServiceCollection services)
         {
             services.AddSingleton(typeof(DataAppSettings), GetSettings());
 
             return services;
-        }
-
-        private static DataAppSettings GetSettings()
-        {
-            DataAppSettings settings = new();
-
-            foreach (var setting in settings.GetType().GetProperties())
-            {
-                setting.SetValue(settings, Environment.GetEnvironmentVariable(setting.Name));
-            }
-
-            return settings;
         }
 
         public static IServiceCollection AddGateways(this IServiceCollection services)
@@ -63,5 +61,23 @@ namespace Thinklogic.Integration.CrossCutting
             return services;
         }
 
+        public static IServiceCollection AddServices(this IServiceCollection services)
+        {
+            services.AddScoped<IInsertCommentAsanaTaskUseCase, InsertCommentAsanaTaskUseCase>();
+
+            return services;
+        }
+
+        private static DataAppSettings GetSettings()
+        {
+            DataAppSettings settings = new();
+
+            foreach (var setting in settings.GetType().GetProperties())
+            {
+                setting.SetValue(settings, Environment.GetEnvironmentVariable(setting.Name));
+            }
+
+            return settings;
+        }
     }
 }

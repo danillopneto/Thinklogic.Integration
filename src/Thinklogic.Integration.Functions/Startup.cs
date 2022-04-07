@@ -11,7 +11,9 @@ namespace Thinklogic.Integration.Functions
         {
             builder.Services.AddConfigurations()
                             .AddGateways()
-                            .AddHttpClients();
+                            .AddHttpClients()
+                            .AddServices()
+                            .SetupAutoMapper();
         }
     }
 }
