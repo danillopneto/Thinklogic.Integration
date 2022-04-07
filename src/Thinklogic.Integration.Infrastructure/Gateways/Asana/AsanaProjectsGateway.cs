@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
-using Thinklogic.Integration.Domain.Asana;
 using Thinklogic.Integration.Interfaces.Gateways.Asana;
+using Thinklogic.Integration.Domain.DataContracts.Responses.Asana;
+using Thinklogic.Integration.Domain.DataContracts;
 
 namespace Thinklogic.Integration.Infrastructure.Gateways.Asana
 {
@@ -13,10 +14,10 @@ namespace Thinklogic.Integration.Infrastructure.Gateways.Asana
             Client = "projects";
         }
 
-        public async Task<IEnumerable<AsanaProject>> GetProjectsAsync(string workspaceGid, CancellationToken ct)
+        public async Task<IEnumerable<AsanaProjectResponse>> GetProjectsAsync(string workspaceGid, CancellationToken ct)
         {
             string url = $"{Client}?opt_fields=gid,name&archived=false&workspace={workspaceGid}";
-            var result = await SendGetRequest<AsanaResponse<IEnumerable<AsanaProject>>>(url, ct);
+            var result = await SendGetRequest<AsanaData<IEnumerable<AsanaProjectResponse>>>(url, ct);
             return result.Data;
         }
     }

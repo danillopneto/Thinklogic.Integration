@@ -1,9 +1,9 @@
 ﻿using Newtonsoft.Json;
-using Thinklogic.Integration.Domain.Azure.PullRequest;
+using Thinklogic.Integration.Domain.Dtos.Azure.PullRequest;
 
-namespace Thinklogic.Integration.Domain.Azure.PullRequest
+namespace Thinklogic.Integration.Domain.Dtos.Azure.PullRequest
 {
-    public class Repository
+    public class RepositoryDto
     {
         [JsonProperty("id")]
         public string Id { get; set; }
@@ -15,7 +15,7 @@ namespace Thinklogic.Integration.Domain.Azure.PullRequest
         public string Url { get; set; }
 
         [JsonProperty("project")]
-        public AzureProject Project { get; set; }
+        public AzureProjectDto Project { get; set; }
 
         [JsonProperty("size")]
         public int Size { get; set; }

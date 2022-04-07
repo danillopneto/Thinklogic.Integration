@@ -1,12 +1,12 @@
 ﻿using Newtonsoft.Json;
-using Thinklogic.Integration.Domain.Azure.PullRequest;
+using Thinklogic.Integration.Domain.Dtos.Azure.PullRequest;
 
-namespace Thinklogic.Integration.Domain.Azure.PullRequest
+namespace Thinklogic.Integration.Domain.Dtos.Azure.PullRequest
 {
-    public class Resource
+    public class ResourceDto
     {
         [JsonProperty("repository")]
-        public Repository Repository { get; set; }
+        public RepositoryDto Repository { get; set; }
 
         [JsonProperty("pullRequestId")]
         public int PullRequestId { get; set; }
@@ -18,7 +18,7 @@ namespace Thinklogic.Integration.Domain.Azure.PullRequest
         public string Status { get; set; }
 
         [JsonProperty("createdBy")]
-        public Person CreatedBy { get; set; }
+        public PersonDto CreatedBy { get; set; }
 
         [JsonProperty("creationDate")]
         public DateTime CreationDate { get; set; }
@@ -48,7 +48,7 @@ namespace Thinklogic.Integration.Domain.Azure.PullRequest
         public string MergeId { get; set; }
 
         [JsonProperty("lastMergeCommit")]
-        public LastMergeCommit LastMergeCommit { get; set; }
+        public LastMergeCommitDto LastMergeCommit { get; set; }
 
         [JsonProperty("reviewers")]
         public List<object> Reviewers { get; set; }
@@ -57,7 +57,7 @@ namespace Thinklogic.Integration.Domain.Azure.PullRequest
         public string Url { get; set; }
 
         [JsonProperty("completionOptions")]
-        public CompletionOptions CompletionOptions { get; set; }
+        public CompletionOptionsDto CompletionOptions { get; set; }
 
         [JsonProperty("supportsIterations")]
         public bool SupportsIterations { get; set; }
@@ -66,7 +66,7 @@ namespace Thinklogic.Integration.Domain.Azure.PullRequest
         public DateTime CompletionQueueTime { get; set; }
 
         [JsonProperty("closedBy")]
-        public Person ClosedBy { get; set; }
+        public PersonDto ClosedBy { get; set; }
 
         [JsonProperty("artifactId")]
         public string ArtifactId { get; set; }

@@ -1,9 +1,9 @@
-﻿using Thinklogic.Integration.Domain.Asana;
+﻿using Thinklogic.Integration.Domain.DataContracts.Responses.Asana;
 
 namespace Thinklogic.Integration.Interfaces.Gateways.Asana
 {
     public interface IAsanaProjectsGateway
     {
-        Task<IEnumerable<AsanaProject>> GetProjectsAsync(string workspaceGid, CancellationToken ct);
+        Task<IEnumerable<AsanaProjectResponse>> GetProjectsAsync(string workspaceGid, CancellationToken ct);
     }
 }

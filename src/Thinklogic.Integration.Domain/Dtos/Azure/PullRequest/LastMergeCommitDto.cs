@@ -1,18 +1,18 @@
 ﻿using Newtonsoft.Json;
-using Thinklogic.Integration.Domain.Azure.PullRequest;
+using Thinklogic.Integration.Domain.Dtos.Azure.PullRequest;
 
-namespace Thinklogic.Integration.Domain.Azure.PullRequest
+namespace Thinklogic.Integration.Domain.Dtos.Azure.PullRequest
 {
-    public class LastMergeCommit
+    public class LastMergeCommitDto
     {
         [JsonProperty("commitId")]
         public string CommitId { get; set; }
 
         [JsonProperty("author")]
-        public BasicPerson Author { get; set; }
+        public BasicPersonDto Author { get; set; }
 
         [JsonProperty("committer")]
-        public BasicPerson Committer { get; set; }
+        public BasicPersonDto Committer { get; set; }
 
         [JsonProperty("comment")]
         public string Comment { get; set; }

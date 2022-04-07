@@ -1,8 +1,8 @@
 ﻿using Newtonsoft.Json;
 
-namespace Thinklogic.Integration.Domain.Asana
+namespace Thinklogic.Integration.Domain.DataContracts.Responses.Asana
 {
-    public class AsanaTask
+    public class AsanaTaskResponse
     {
         [JsonProperty("gid")]
         public string Gid { get; set; }

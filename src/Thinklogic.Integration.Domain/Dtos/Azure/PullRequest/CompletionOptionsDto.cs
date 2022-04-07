@@ -1,8 +1,8 @@
 ﻿using Newtonsoft.Json;
 
-namespace Thinklogic.Integration.Domain.Azure.PullRequest
+namespace Thinklogic.Integration.Domain.Dtos.Azure.PullRequest
 {
-    public class CompletionOptions
+    public class CompletionOptionsDto
     {
         [JsonProperty("mergeCommitMessage")]
         public string MergeCommitMessage { get; set; }

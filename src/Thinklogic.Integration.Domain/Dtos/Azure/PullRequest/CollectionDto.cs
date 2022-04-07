@@ -1,8 +1,8 @@
 ﻿using Newtonsoft.Json;
 
-namespace Thinklogic.Integration.Domain.Azure.PullRequest
+namespace Thinklogic.Integration.Domain.Dtos.Azure.PullRequest
 {
-    public class Collection
+    public class CollectionDto
     {
         [JsonProperty("id")]
         public string Id { get; set; }

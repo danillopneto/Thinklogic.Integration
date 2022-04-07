@@ -55,9 +55,9 @@ namespace Thinklogic.Integration.Infrastructure.Gateways
             }
         }
 
-        public virtual async Task SendPostRequest<TRequest>(string url,
-                                                            TRequest body,
-                                                            CancellationToken cancellationToken = default)
+        public virtual async Task<TResponse> SendPostRequest<TRequest, TResponse>(string url,
+                                                                                  TRequest body,
+                                                                                  CancellationToken cancellationToken = default)
         {
             var responseContent = string.Empty;
 
@@ -65,11 +65,13 @@ namespace Thinklogic.Integration.Infrastructure.Gateways
             {
                 using var client = GetClient();
                 string json = JsonConvert.SerializeObject(body, JsonSettings);
-                StringContent content = new StringContent(json, Encoding.UTF8, "application/json");
+                StringContent content = new(json, Encoding.UTF8, "application/json");
 
                 HttpResponseMessage clientResponse = await client.PostAsync(url, content, cancellationToken);
-                responseContent = await clientResponse.Content.ReadAsStringAsync();
+                responseContent = await clientResponse.Content.ReadAsStringAsync(cancellationToken);
                 clientResponse.EnsureSuccessStatusCode();
+
+                return JsonConvert.DeserializeObject<TResponse>(responseContent, JsonSettings);
             }
             catch (Exception ex)
             {
@@ -78,9 +80,6 @@ namespace Thinklogic.Integration.Infrastructure.Gateways
             }
         }
 
-        protected virtual HttpClient GetClient()
-        {
-            return HttpClientFactory.CreateClient(BaseClient);
-        }
+        protected virtual HttpClient GetClient() => HttpClientFactory.CreateClient(BaseClient);
     }
 }

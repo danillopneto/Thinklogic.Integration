@@ -31,6 +31,7 @@ namespace Thinklogic.Integration.CrossCutting
         public static IServiceCollection AddGateways(this IServiceCollection services)
         {
             services.AddScoped<IAsanaProjectsGateway, AsanaProjectsGateway>();
+            services.AddScoped<IAsanaTasksGateway, AsanaTasksGateway>();
             services.AddScoped<IAsanaWorkspacesGateway, AsanaWorkspacesGateway>();
 
             return services;

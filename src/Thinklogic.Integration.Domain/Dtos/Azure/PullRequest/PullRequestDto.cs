@@ -1,9 +1,9 @@
 ﻿using Newtonsoft.Json;
-using Thinklogic.Integration.Domain.Azure.PullRequest;
+using Thinklogic.Integration.Domain.Dtos.Azure.PullRequest;
 
-namespace Thinklogic.Integration.Domain.Azure.PullRequest
+namespace Thinklogic.Integration.Domain.Dtos.Azure.PullRequest
 {
-    public class PullRequest
+    public class PullRequestDto
     {
         [JsonProperty("subscriptionId")]
         public string SubscriptionId { get; set; }
@@ -21,13 +21,13 @@ namespace Thinklogic.Integration.Domain.Azure.PullRequest
         public string PublisherId { get; set; }
 
         [JsonProperty("message")]
-        public Message Message { get; set; }
+        public MessageDto Message { get; set; }
 
         [JsonProperty("detailedMessage")]
-        public Message DetailedMessage { get; set; }
+        public MessageDto DetailedMessage { get; set; }
 
         [JsonProperty("resource")]
-        public Resource Resource { get; set; }
+        public ResourceDto Resource { get; set; }
 
         [JsonProperty("createdDate")]
         public DateTime CreatedDate { get; set; }
