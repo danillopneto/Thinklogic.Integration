@@ -2,12 +2,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
 using System;
+using System.Linq;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Thinklogic.Integration.Domain.Dtos.Asana;
-using Thinklogic.Integration.Domain.Dtos.Azure.PullRequest;
 using Thinklogic.Integration.Infrastructure.Configurations;
 using Thinklogic.Integration.Interfaces.UseCases.Asana;
 
@@ -15,6 +16,9 @@ namespace Thinklogic.Integration.Functions.WebHooks
 {
     public class AsanaFunction
     {
+        private const string AsanaTitlePath = "asana-title-path";
+        private const string AsanaCommentPath = "asana-comment-path";
+
         private readonly IInsertCommentAsanaTaskUseCase _insertCommentAsanaTaskUseCase;
         private readonly DataAppSettings _settings;
 
@@ -25,19 +29,42 @@ namespace Thinklogic.Integration.Functions.WebHooks
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         }
 
-        [FunctionName("UpdateAsanaCommentWithPRUpdate")]
+        [FunctionName("UpdateAsanaTaskWithComment")]
         public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestMessage req,
                                              ILogger log)
         {
             log.LogInformation("C# HTTP trigger function processed a request.");
+            if (!req.Headers.Contains(AsanaTitlePath))
+            {
+                throw new ArgumentNullException(AsanaTitlePath);
+            }
 
-            PullRequestDto data = await req.Content.ReadAsAsync<PullRequestDto>();
+            var parsed = JObject.Parse(await req.Content.ReadAsStringAsync());
 
-            var projectName = Regex.Match(data.Resource.Title, _settings.ProjectNamePattern);
-            var taskName = Regex.Replace(data.Resource.Title, _settings.TaskNameReplacePattern, string.Empty);
+            var pathToIdentifyAsanaTask = req.Headers.GetValues(AsanaTitlePath).First();
+            var asanaTaskName = parsed.SelectToken(pathToIdentifyAsanaTask).Value<string>();
+            if (string.IsNullOrEmpty(asanaTaskName))
+            {
+                throw new InvalidOperationException("Invalid Path to get the Asana Task.");
+            }
 
-            AsanaCommentResultDto result = await _insertCommentAsanaTaskUseCase.InsertCommentAsync(_settings.WorkspaceId, projectName.Value, taskName, data.Message.Html);
-            log.LogInformation($"Comment mady in Workspace {_settings.WorkspaceId}");
+            var projectName = Regex.Match(asanaTaskName, _settings.ProjectNamePattern);
+            var taskName = Regex.Replace(asanaTaskName, _settings.TaskNameReplacePattern, string.Empty);
+
+            var pathToIdentifyComment = req.Headers.GetValues(AsanaCommentPath).First();
+            var taskComment = parsed.SelectToken(pathToIdentifyComment).Value<string>();
+            if (string.IsNullOrEmpty(taskComment))
+            {
+                throw new InvalidOperationException("Invalid Path to get the Comment Task.");
+            }
+
+            AsanaCommentResultDto result = await _insertCommentAsanaTaskUseCase.InsertCommentAsync(_settings.WorkspaceId,
+                                                                                                   projectName.Value,
+                                                                                                   taskName,
+                                                                                                   taskComment);
+
+            log.LogInformation($"Comment made in Workspace {_settings.WorkspaceId}.");
+
             return new OkObjectResult(result);
         }
     }
