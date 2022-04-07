@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Web;
 using Thinklogic.Integration.Domain.Dtos.Asana;
 using Thinklogic.Integration.Infrastructure.Configurations;
 using Thinklogic.Integration.Interfaces.UseCases.Asana;
@@ -39,7 +40,8 @@ namespace Thinklogic.Integration.Functions.WebHooks
                 throw new ArgumentNullException(AsanaTitlePath);
             }
 
-            var parsed = JObject.Parse(await req.Content.ReadAsStringAsync());
+            var payload = HttpUtility.HtmlDecode(await req.Content.ReadAsStringAsync());
+            var parsed = JObject.Parse(payload);
 
             var pathToIdentifyAsanaTask = req.Headers.GetValues(AsanaTitlePath).First();
             var asanaTaskName = parsed.SelectToken(pathToIdentifyAsanaTask).Value<string>();
