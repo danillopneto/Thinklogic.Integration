@@ -19,6 +19,8 @@ namespace Thinklogic.Integration.Functions.WebHooks
     {
         private const string AsanaTitlePath = "asana-title-path";
         private const string AsanaCommentPath = "asana-comment-path";
+        private const string FilterPath = "filter-path";
+        private const string FilterValue = "filter-value";
 
         private readonly IInsertCommentAsanaTaskUseCase _insertCommentAsanaTaskUseCase;
         private readonly DataAppSettings _settings;
@@ -35,18 +37,15 @@ namespace Thinklogic.Integration.Functions.WebHooks
                                              ILogger log)
         {
             log.LogInformation("C# HTTP trigger function processed a request.");
-            if (!req.Headers.Contains(AsanaTitlePath))
-            {
-                throw new NullReferenceException($"{AsanaTitlePath} was not found inside the header.");
-            }
-
-            if (!req.Headers.Contains(AsanaCommentPath))
-            {
-                throw new NullReferenceException($"{AsanaCommentPath} was not found inside the header.");
-            }
+            CheckHeaders(req);
 
             var payload = HttpUtility.HtmlDecode(await req.Content.ReadAsStringAsync());
             var parsed = JObject.Parse(payload);
+
+            if (!ShouldProcess(req, parsed))
+            {
+                return default;
+            }
 
             var pathToIdentifyAsanaTask = req.Headers.GetValues(AsanaTitlePath).First();
             var asanaTaskName = parsed.SelectToken(pathToIdentifyAsanaTask).Value<string>();
@@ -73,6 +72,31 @@ namespace Thinklogic.Integration.Functions.WebHooks
             log.LogInformation($"Comment made in Workspace {_settings.WorkspaceId}.");
 
             return new OkObjectResult(result);
+        }
+
+        private static void CheckHeaders(HttpRequestMessage req)
+        {
+            if (!req.Headers.Contains(AsanaTitlePath))
+            {
+                throw new NullReferenceException($"{AsanaTitlePath} was not found inside the header.");
+            }
+
+            if (!req.Headers.Contains(AsanaCommentPath))
+            {
+                throw new NullReferenceException($"{AsanaCommentPath} was not found inside the header.");
+            }
+        }
+
+        private static bool ShouldProcess(HttpRequestMessage req, JObject data)
+        {
+            if (!req.Headers.Contains(FilterPath))
+            {
+                return true;
+            }
+
+            var pathToFilterData = req.Headers.GetValues(FilterPath).FirstOrDefault();
+            string filterValue = req.Headers.GetValues(FilterValue).FirstOrDefault();
+            return data.SelectToken(pathToFilterData).Value<string>() == filterValue;
         }
     }
 }
