@@ -1,9 +1,11 @@
+using Ardalis.Result;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Text.RegularExpressions;
@@ -37,21 +39,29 @@ namespace Thinklogic.Integration.Functions.WebHooks
                                              ILogger log)
         {
             log.LogInformation("C# HTTP trigger function processed a request.");
-            CheckHeaders(req);
+            if (!req.Headers.Contains(AsanaTitlePath))
+            {
+                return ReturnInvalidOperation($"{AsanaTitlePath} was not found inside the header.");
+            }
+
+            if (!req.Headers.Contains(AsanaCommentPath))
+            {
+                return ReturnInvalidOperation($"{AsanaCommentPath} was not found inside the header.");
+            }
 
             var payload = HttpUtility.HtmlDecode(await req.Content.ReadAsStringAsync());
             var parsed = JObject.Parse(payload);
 
             if (!ShouldProcess(req, parsed))
             {
-                return default;
+                return new OkObjectResult(Result<string>.Success(default, "It wasn't necessary to process."));
             }
 
             var pathToIdentifyAsanaTask = req.Headers.GetValues(AsanaTitlePath).First();
             var asanaTaskName = parsed.SelectToken(pathToIdentifyAsanaTask).Value<string>();
             if (string.IsNullOrEmpty(asanaTaskName))
             {
-                throw new InvalidOperationException("Invalid Path to get the Asana Task.");
+                return ReturnInvalidOperation("Invalid Path to get the Asana Task.");
             }
 
             var projectName = Regex.Match(asanaTaskName, _settings.ProjectNamePattern);
@@ -61,7 +71,7 @@ namespace Thinklogic.Integration.Functions.WebHooks
             var taskComment = parsed.SelectToken(pathToIdentifyComment).Value<string>();
             if (string.IsNullOrEmpty(taskComment))
             {
-                throw new InvalidOperationException("Invalid Path to get the Comment Task.");
+                return ReturnInvalidOperation("Invalid Path to get the Comment Task.");
             }
 
             AsanaCommentResultDto result = await _insertCommentAsanaTaskUseCase.InsertCommentAsync(_settings.WorkspaceId,
@@ -71,20 +81,7 @@ namespace Thinklogic.Integration.Functions.WebHooks
 
             log.LogInformation($"Comment made in Workspace {_settings.WorkspaceId}.");
 
-            return new OkObjectResult(result);
-        }
-
-        private static void CheckHeaders(HttpRequestMessage req)
-        {
-            if (!req.Headers.Contains(AsanaTitlePath))
-            {
-                throw new NullReferenceException($"{AsanaTitlePath} was not found inside the header.");
-            }
-
-            if (!req.Headers.Contains(AsanaCommentPath))
-            {
-                throw new NullReferenceException($"{AsanaCommentPath} was not found inside the header.");
-            }
+            return new OkObjectResult(Result< AsanaCommentResultDto>.Success(result));
         }
 
         private static bool ShouldProcess(HttpRequestMessage req, JObject data)
@@ -94,9 +91,15 @@ namespace Thinklogic.Integration.Functions.WebHooks
                 return true;
             }
 
-            var pathToFilterData = req.Headers.GetValues(FilterPath).FirstOrDefault();
+            string pathToFilterData = req.Headers.GetValues(FilterPath).FirstOrDefault();
             string filterValue = req.Headers.GetValues(FilterValue).FirstOrDefault();
             return data.SelectToken(pathToFilterData).Value<string>() == filterValue;
+        }
+
+        private static IActionResult ReturnInvalidOperation(string message)
+        {
+            var result = Result<string>.Invalid(new List<ValidationError> { new ValidationError { ErrorMessage = message } });
+            return new OkObjectResult(result);
         }
     }
 }
