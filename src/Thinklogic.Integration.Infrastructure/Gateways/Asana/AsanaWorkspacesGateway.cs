@@ -14,7 +14,22 @@ namespace Thinklogic.Integration.Infrastructure.Gateways.Asana
             Client = "workspaces";
         }
 
-        public async Task<AsanaTaskResponse> GetTaskAsync(string workspaceGid, string projectGid, string taskName, CancellationToken ct)
+        public async Task<AsanaCustomFieldResponse> GetCustomFieldAsync(string workspaceGid,
+                                                                        string customFieldKey,
+                                                                        CancellationToken ct)
+        {
+            string url = $"{Client}/{workspaceGid}/custom_fields";
+            var result = await SendGetRequest<AsanaData<IEnumerable<AsanaCustomFieldResponse>>>(url, ct);
+
+            return result.Data != null && result.Data.Any() ?
+                   result.Data.FirstOrDefault(x => x.Name == customFieldKey) :
+                   default;
+        }
+
+        public async Task<AsanaTaskResponse> GetTaskAsync(string workspaceGid,
+                                                          string projectGid,
+                                                          string taskName,
+                                                          CancellationToken ct)
         {
             string url = $"{Client}/{workspaceGid}/tasks/search?projects.any={projectGid}&text={taskName}&completed=false";
             var result = await SendGetRequest<AsanaData<IEnumerable<AsanaTaskResponse>>>(url, ct);

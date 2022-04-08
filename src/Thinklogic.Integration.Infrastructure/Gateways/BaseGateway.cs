@@ -80,6 +80,29 @@ namespace Thinklogic.Integration.Infrastructure.Gateways
             }
         }
 
+        public virtual async Task SendPutRequest<TRequest>(string url,
+                                                           TRequest body,
+                                                           CancellationToken cancellationToken = default)
+        {
+            var responseContent = string.Empty;
+
+            try
+            {
+                using var client = GetClient();
+                string json = JsonConvert.SerializeObject(body, JsonSettings);
+                StringContent content = new(json, Encoding.UTF8, "application/json");
+
+                HttpResponseMessage clientResponse = await client.PutAsync(url, content, cancellationToken);
+                responseContent = await clientResponse.Content.ReadAsStringAsync(cancellationToken);
+                clientResponse.EnsureSuccessStatusCode();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error trying to reach {Url}: {ResponseContent}", url, responseContent);
+                throw;
+            }
+        }
+
         protected virtual HttpClient GetClient() => HttpClientFactory.CreateClient(BaseClient);
     }
 }

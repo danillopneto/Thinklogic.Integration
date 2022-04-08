@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using Thinklogic.Integration.Domain.Dtos.Asana;
@@ -21,22 +22,84 @@ namespace Thinklogic.Integration.Functions.WebHooks
     {
         private const string AsanaTitlePath = "asana-title-path";
         private const string AsanaCommentPath = "asana-comment-path";
+        private const string AsanaCustomFieldKey = "asana-custom-field-key";
+        private const string AsanaCustomFieldValue = "asana-custom-field-value";
         private const string FilterPath = "filter-path";
         private const string FilterValue = "filter-value";
 
         private readonly IInsertCommentAsanaTaskUseCase _insertCommentAsanaTaskUseCase;
+        private readonly IUpdateAsanaTaskCustomFieldUseCase _updateAsanaTaskCustomFieldUseCase;
         private readonly DataAppSettings _settings;
 
         public AsanaFunction(IInsertCommentAsanaTaskUseCase insertCommentAsanaTaskUseCase,
+                             IUpdateAsanaTaskCustomFieldUseCase updateAsanaTaskCustomFieldUseCase,
                              DataAppSettings settings)
         {
             _insertCommentAsanaTaskUseCase = insertCommentAsanaTaskUseCase ?? throw new ArgumentNullException(nameof(insertCommentAsanaTaskUseCase));
+            _updateAsanaTaskCustomFieldUseCase = updateAsanaTaskCustomFieldUseCase ?? throw new ArgumentNullException(nameof(updateAsanaTaskCustomFieldUseCase));
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         }
 
+        [FunctionName("UpdateAsanaTaskCustomField")]
+        public async Task<IActionResult> UpdateAsanaTaskCustomField([HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestMessage req,
+                                                                    ILogger log)
+        {
+            log.LogInformation("C# HTTP trigger function processed a request.");
+            if (!req.Headers.Contains(AsanaTitlePath))
+            {
+                return ReturnInvalidOperation($"{AsanaTitlePath} was not found inside the header.");
+            }
+
+            if (!req.Headers.Contains(AsanaCommentPath))
+            {
+                return ReturnInvalidOperation($"{AsanaCommentPath} was not found inside the header.");
+            }
+
+            if (!req.Headers.Contains(AsanaCustomFieldKey))
+            {
+                return ReturnInvalidOperation($"{AsanaCustomFieldKey} was not found inside the header.");
+            }
+
+            if (!req.Headers.Contains(AsanaCustomFieldValue))
+            {
+                return ReturnInvalidOperation($"{AsanaCustomFieldValue} was not found inside the header.");
+            }
+
+            var payload = HttpUtility.HtmlDecode(await req.Content.ReadAsStringAsync());
+            var parsed = JObject.Parse(payload);
+
+            if (!ShouldProcess(req, parsed))
+            {
+                return new OkObjectResult(Result<string>.Success(default, "It wasn't necessary to process."));
+            }
+
+            var pathToIdentifyAsanaTask = req.Headers.GetValues(AsanaTitlePath).First();
+            var asanaTaskName = parsed.SelectToken(pathToIdentifyAsanaTask).Value<string>();
+            if (string.IsNullOrEmpty(asanaTaskName))
+            {
+                return ReturnInvalidOperation("Invalid Path to get the Asana Task.");
+            }
+
+            var projectName = Regex.Match(asanaTaskName, _settings.ProjectNamePattern);
+            var taskName = Regex.Replace(asanaTaskName, _settings.TaskNameReplacePattern, string.Empty);
+            var customFieldKey = req.Headers.GetValues(AsanaCustomFieldKey).First();            
+            var customFieldValue = req.Headers.GetValues(AsanaCustomFieldValue).First();
+
+            await _updateAsanaTaskCustomFieldUseCase.UpdateTaskCustomFieldAsync(_settings.WorkspaceId,
+                                                                                projectName.Value,
+                                                                                taskName,
+                                                                                customFieldKey,
+                                                                                customFieldValue,
+                                                                                CancellationToken.None);
+
+            log.LogInformation($"Custom Field Updated made in Workspace {_settings.WorkspaceId}.");
+
+            return new OkObjectResult(Result<string>.Success(default));
+        }
+
         [FunctionName("UpdateAsanaTaskWithComment")]
-        public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestMessage req,
-                                             ILogger log)
+        public async Task<IActionResult> UpdateAsanaTaskWithComment([HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestMessage req,
+                                                                    ILogger log)
         {
             log.LogInformation("C# HTTP trigger function processed a request.");
             if (!req.Headers.Contains(AsanaTitlePath))

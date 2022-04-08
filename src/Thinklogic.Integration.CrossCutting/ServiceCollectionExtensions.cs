@@ -64,6 +64,7 @@ namespace Thinklogic.Integration.CrossCutting
         public static IServiceCollection AddServices(this IServiceCollection services)
         {
             services.AddScoped<IInsertCommentAsanaTaskUseCase, InsertCommentAsanaTaskUseCase>();
+            services.AddScoped<IUpdateAsanaTaskCustomFieldUseCase, UpdateAsanaTaskCustomFieldUseCase>();            
 
             return services;
         }

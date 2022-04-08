@@ -26,7 +26,8 @@ namespace Thinklogic.Integration.UseCases.Services
 
         public async Task<AsanaCommentResultDto> InsertCommentAsync(string workspaceId, string projectName, string taskName, string htmlMessage)
         {
-            if (string.IsNullOrWhiteSpace(projectName) ||
+            if (string.IsNullOrWhiteSpace(workspaceId) ||
+                string.IsNullOrWhiteSpace(projectName) ||
                 string.IsNullOrWhiteSpace(taskName) ||
                 string.IsNullOrWhiteSpace(htmlMessage))
             {
@@ -36,17 +37,24 @@ namespace Thinklogic.Integration.UseCases.Services
             var projects = await _asanaProjectsGateway.GetProjectsAsync(workspaceId, CancellationToken.None);
 
             var projectRelated = projects.FirstOrDefault(x => x.Name == projectName);
-            if (projectRelated is not null)
+            if (projectRelated is null)
             {
-                var taskRelated = await _asanaWorkspacesGateway.GetTaskAsync(workspaceId, projectRelated.Gid, taskName.Trim(), CancellationToken.None);
-                if (taskRelated is not null)
-                {
-                    var result = await _asanaTaskGateway.IncludeCommentAsync(taskRelated.Gid, new AsanaCommentRequest { HtmlText = htmlMessage });
-                    return _mapper.Map<AsanaCommentResultDto>(result);
-                }
+                return default;   
             }
 
-            return default;
+            var taskRelated = await _asanaWorkspacesGateway.GetTaskAsync(workspaceId,
+                                                                             projectRelated.Gid,
+                                                                             taskName.Trim(),
+                                                                             CancellationToken.None);
+            if (taskRelated is null)
+            {
+                return default;
+            }
+
+            var result = await _asanaTaskGateway.IncludeCommentAsync(taskRelated.Gid,
+                                                                     new AsanaCommentRequest { HtmlText = htmlMessage },
+                                                                     CancellationToken.None);
+            return _mapper.Map<AsanaCommentResultDto>(result);
         }
     }
 }

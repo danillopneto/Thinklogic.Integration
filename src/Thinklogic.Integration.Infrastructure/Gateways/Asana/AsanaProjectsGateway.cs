@@ -14,7 +14,8 @@ namespace Thinklogic.Integration.Infrastructure.Gateways.Asana
             Client = "projects";
         }
 
-        public async Task<IEnumerable<AsanaProjectResponse>> GetProjectsAsync(string workspaceGid, CancellationToken ct)
+        public async Task<IEnumerable<AsanaProjectResponse>> GetProjectsAsync(string workspaceGid,
+                                                                              CancellationToken ct)
         {
             string url = $"{Client}?opt_fields=gid,name&archived=false&workspace={workspaceGid}";
             var result = await SendGetRequest<AsanaData<IEnumerable<AsanaProjectResponse>>>(url, ct);
