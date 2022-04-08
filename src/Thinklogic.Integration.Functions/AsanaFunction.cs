@@ -93,7 +93,7 @@ namespace Thinklogic.Integration.Functions.WebHooks
 
             string pathToFilterData = req.Headers.GetValues(FilterPath).FirstOrDefault();
             string filterValue = req.Headers.GetValues(FilterValue).FirstOrDefault();
-            return data.SelectToken(pathToFilterData).Value<string>() == filterValue;
+            return data.SelectToken(pathToFilterData).Value<string>().Contains(filterValue);
         }
 
         private static IActionResult ReturnInvalidOperation(string message)
