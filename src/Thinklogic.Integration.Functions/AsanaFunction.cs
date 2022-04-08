@@ -81,7 +81,7 @@ namespace Thinklogic.Integration.Functions.WebHooks
 
             log.LogInformation($"Comment made in Workspace {_settings.WorkspaceId}.");
 
-            return new OkObjectResult(Result< AsanaCommentResultDto>.Success(result));
+            return new OkObjectResult(Result<AsanaCommentResultDto>.Success(result));
         }
 
         private static bool ShouldProcess(HttpRequestMessage req, JObject data)
