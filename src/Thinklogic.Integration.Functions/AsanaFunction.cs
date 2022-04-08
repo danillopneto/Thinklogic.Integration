@@ -37,7 +37,12 @@ namespace Thinklogic.Integration.Functions.WebHooks
             log.LogInformation("C# HTTP trigger function processed a request.");
             if (!req.Headers.Contains(AsanaTitlePath))
             {
-                throw new ArgumentNullException(AsanaTitlePath);
+                throw new NullReferenceException($"{AsanaTitlePath} was not found inside the header.");
+            }
+
+            if (!req.Headers.Contains(AsanaCommentPath))
+            {
+                throw new NullReferenceException($"{AsanaCommentPath} was not found inside the header.");
             }
 
             var payload = HttpUtility.HtmlDecode(await req.Content.ReadAsStringAsync());

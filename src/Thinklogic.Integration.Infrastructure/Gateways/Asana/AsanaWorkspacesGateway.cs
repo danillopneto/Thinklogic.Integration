@@ -16,7 +16,7 @@ namespace Thinklogic.Integration.Infrastructure.Gateways.Asana
 
         public async Task<AsanaTaskResponse> GetTaskAsync(string workspaceGid, string projectGid, string taskName, CancellationToken ct)
         {
-            string url = $"{Client}/{workspaceGid}/tasks/search?projects.any={projectGid}&text={taskName}";
+            string url = $"{Client}/{workspaceGid}/tasks/search?projects.any={projectGid}&text={taskName}&completed=false";
             var result = await SendGetRequest<AsanaData<IEnumerable<AsanaTaskResponse>>>(url, ct);
 
             return result.Data != null && result.Data.Any() ?
