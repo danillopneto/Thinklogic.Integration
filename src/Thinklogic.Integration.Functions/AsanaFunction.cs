@@ -20,16 +20,16 @@ namespace Thinklogic.Integration.Functions.WebHooks
 {
     public class AsanaFunction
     {
-        private const string AsanaTitlePath = "asana-title-path";
         private const string AsanaCommentPath = "asana-comment-path";
         private const string AsanaCustomFieldKey = "asana-custom-field-key";
         private const string AsanaCustomFieldValue = "asana-custom-field-value";
+        private const string AsanaTitlePath = "asana-title-path";
         private const string FilterPath = "filter-path";
         private const string FilterValue = "filter-value";
 
         private readonly IInsertCommentAsanaTaskUseCase _insertCommentAsanaTaskUseCase;
-        private readonly IUpdateAsanaTaskCustomFieldUseCase _updateAsanaTaskCustomFieldUseCase;
         private readonly DataAppSettings _settings;
+        private readonly IUpdateAsanaTaskCustomFieldUseCase _updateAsanaTaskCustomFieldUseCase;
 
         public AsanaFunction(IInsertCommentAsanaTaskUseCase insertCommentAsanaTaskUseCase,
                              IUpdateAsanaTaskCustomFieldUseCase updateAsanaTaskCustomFieldUseCase,
@@ -45,24 +45,13 @@ namespace Thinklogic.Integration.Functions.WebHooks
                                                                     ILogger log)
         {
             log.LogInformation("C# HTTP trigger function processed a request.");
-            if (!req.Headers.Contains(AsanaTitlePath))
+            var result = ValidateHeader(req,
+                                        AsanaTitlePath,
+                                        AsanaCustomFieldKey,
+                                        AsanaCustomFieldValue);
+            if (!result.IsSuccess)
             {
-                return ReturnInvalidOperation($"{AsanaTitlePath} was not found inside the header.");
-            }
-
-            if (!req.Headers.Contains(AsanaCommentPath))
-            {
-                return ReturnInvalidOperation($"{AsanaCommentPath} was not found inside the header.");
-            }
-
-            if (!req.Headers.Contains(AsanaCustomFieldKey))
-            {
-                return ReturnInvalidOperation($"{AsanaCustomFieldKey} was not found inside the header.");
-            }
-
-            if (!req.Headers.Contains(AsanaCustomFieldValue))
-            {
-                return ReturnInvalidOperation($"{AsanaCustomFieldValue} was not found inside the header.");
+                return new OkObjectResult(result);
             }
 
             var payload = HttpUtility.HtmlDecode(await req.Content.ReadAsStringAsync());
@@ -82,7 +71,7 @@ namespace Thinklogic.Integration.Functions.WebHooks
 
             var projectName = Regex.Match(asanaTaskName, _settings.ProjectNamePattern);
             var taskName = Regex.Replace(asanaTaskName, _settings.TaskNameReplacePattern, string.Empty);
-            var customFieldKey = req.Headers.GetValues(AsanaCustomFieldKey).First();            
+            var customFieldKey = req.Headers.GetValues(AsanaCustomFieldKey).First();
             var customFieldValue = req.Headers.GetValues(AsanaCustomFieldValue).First();
 
             await _updateAsanaTaskCustomFieldUseCase.UpdateTaskCustomFieldAsync(_settings.WorkspaceId,
@@ -102,14 +91,12 @@ namespace Thinklogic.Integration.Functions.WebHooks
                                                                     ILogger log)
         {
             log.LogInformation("C# HTTP trigger function processed a request.");
-            if (!req.Headers.Contains(AsanaTitlePath))
+            var result = ValidateHeader(req,
+                                        AsanaTitlePath,
+                                        AsanaCommentPath);
+            if (!result.IsSuccess)
             {
-                return ReturnInvalidOperation($"{AsanaTitlePath} was not found inside the header.");
-            }
-
-            if (!req.Headers.Contains(AsanaCommentPath))
-            {
-                return ReturnInvalidOperation($"{AsanaCommentPath} was not found inside the header.");
+                return new OkObjectResult(result);
             }
 
             var payload = HttpUtility.HtmlDecode(await req.Content.ReadAsStringAsync());
@@ -137,14 +124,20 @@ namespace Thinklogic.Integration.Functions.WebHooks
                 return ReturnInvalidOperation("Invalid Path to get the Comment Task.");
             }
 
-            AsanaCommentResultDto result = await _insertCommentAsanaTaskUseCase.InsertCommentAsync(_settings.WorkspaceId,
-                                                                                                   projectName.Value,
-                                                                                                   taskName,
-                                                                                                   taskComment);
+            AsanaCommentResultDto commentResult = await _insertCommentAsanaTaskUseCase.InsertCommentAsync(_settings.WorkspaceId,
+                                                                                                          projectName.Value,
+                                                                                                          taskName,
+                                                                                                          taskComment);
 
             log.LogInformation($"Comment made in Workspace {_settings.WorkspaceId}.");
 
-            return new OkObjectResult(Result<AsanaCommentResultDto>.Success(result));
+            return new OkObjectResult(Result<AsanaCommentResultDto>.Success(commentResult));
+        }
+
+        private static IActionResult ReturnInvalidOperation(string message)
+        {
+            var result = Result<string>.Invalid(new List<ValidationError> { new ValidationError { ErrorMessage = message } });
+            return new OkObjectResult(result);
         }
 
         private static bool ShouldProcess(HttpRequestMessage req, JObject data)
@@ -159,10 +152,18 @@ namespace Thinklogic.Integration.Functions.WebHooks
             return data.SelectToken(pathToFilterData).Value<string>().Contains(filterValue);
         }
 
-        private static IActionResult ReturnInvalidOperation(string message)
+        private static Result<bool> ValidateHeader(HttpRequestMessage req, params string[] headerKeys)
         {
-            var result = Result<string>.Invalid(new List<ValidationError> { new ValidationError { ErrorMessage = message } });
-            return new OkObjectResult(result);
+            var validations = new List<ValidationError>();
+            foreach (var headerKey in headerKeys)
+            {
+                if (!req.Headers.Contains(headerKey))
+                {
+                    validations.Add(new ValidationError { ErrorMessage = $"{headerKey} was not found inside the header.", Identifier = headerKey });
+                }
+            }
+
+            return validations.Any() ? Result<bool>.Invalid(validations) : Result<bool>.Success(true);
         }
     }
 }
