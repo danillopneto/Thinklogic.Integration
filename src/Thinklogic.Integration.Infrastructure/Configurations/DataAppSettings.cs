@@ -10,6 +10,8 @@
 
         public string ProjectNamePattern { get; set; }
 
-        public string TaskNameReplacePattern { get; set; }
+        public string TaskNamePattern { get; set; }
+
+        public string MultiTaskNamePattern { get; set; }
     }
 }

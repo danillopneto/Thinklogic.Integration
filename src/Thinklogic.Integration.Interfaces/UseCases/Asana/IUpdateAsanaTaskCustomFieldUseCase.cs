@@ -8,5 +8,12 @@
                                         string customFieldKey,
                                         string customFieldValue,
                                         CancellationToken ct);
+
+        Task UpdateTasksCustomFieldAsync(string workspaceId,
+                                         string projectName,
+                                         IEnumerable<string> tasksName,
+                                         string customFieldKey,
+                                         string customFieldValue,
+                                         CancellationToken ct);
     }
 }

@@ -34,8 +34,8 @@ namespace Thinklogic.Integration.Infrastructure.Gateways.Asana
             string url = $"{Client}/{workspaceGid}/tasks/search?projects.any={projectGid}&text={taskName}&completed=false";
             var result = await SendGetRequest<AsanaData<IEnumerable<AsanaTaskResponse>>>(url, ct);
 
-            return result.Data != null && result.Data.Any() ?
-                   result.Data.First() :
+            return result.Data != null && result.Data.Any(x => x.Name == taskName) ?
+                   result.Data.First(x => x.Name == taskName) :
                    default;
         }
     }

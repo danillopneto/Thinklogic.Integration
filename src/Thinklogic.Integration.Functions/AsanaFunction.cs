@@ -40,6 +40,52 @@ namespace Thinklogic.Integration.Functions.WebHooks
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         }
 
+        [FunctionName("UpdateAsanaTasksCustomField")]
+        public async Task<IActionResult> UpdateAsanaTasksCustomField([HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestMessage req,
+                                                                    ILogger log)
+        {
+            log.LogInformation("C# HTTP trigger function processed a request.");
+            var result = ValidateHeader(req,
+                                        AsanaTitlePath,
+                                        AsanaCustomFieldKey,
+                                        AsanaCustomFieldValue);
+            if (!result.IsSuccess)
+            {
+                return new OkObjectResult(result);
+            }
+
+            var payload = HttpUtility.HtmlDecode(await req.Content.ReadAsStringAsync());
+            var parsed = JObject.Parse(payload);
+
+            if (!ShouldProcess(req, parsed))
+            {
+                return new OkObjectResult(Result<string>.Success(default, "It wasn't necessary to process."));
+            }
+
+            var pathToIdentifyAsanaTask = req.Headers.GetValues(AsanaTitlePath).First();
+            var asanaTaskName = parsed.SelectToken(pathToIdentifyAsanaTask).Value<string>();
+            if (string.IsNullOrEmpty(asanaTaskName))
+            {
+                return ReturnInvalidOperation("Invalid Path to get the Asana Task.");
+            }
+
+            var projectName = Regex.Match(asanaTaskName, _settings.ProjectNamePattern);
+            var tasksName = Regex.Matches(asanaTaskName, _settings.MultiTaskNamePattern);
+            var customFieldKey = req.Headers.GetValues(AsanaCustomFieldKey).First();
+            var customFieldValue = req.Headers.GetValues(AsanaCustomFieldValue).First();
+
+            await _updateAsanaTaskCustomFieldUseCase.UpdateTasksCustomFieldAsync(_settings.WorkspaceId,
+                                                                                 projectName.Value,
+                                                                                 tasksName.Select(x => x.Value.Trim()),
+                                                                                 customFieldKey,
+                                                                                 customFieldValue,
+                                                                                 CancellationToken.None);
+
+            log.LogInformation($"Custom Fields Updated made in Workspace {_settings.WorkspaceId}.");
+
+            return new OkObjectResult(Result<string>.Success(default));
+        }
+
         [FunctionName("UpdateAsanaTaskCustomField")]
         public async Task<IActionResult> UpdateAsanaTaskCustomField([HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestMessage req,
                                                                     ILogger log)
@@ -70,13 +116,13 @@ namespace Thinklogic.Integration.Functions.WebHooks
             }
 
             var projectName = Regex.Match(asanaTaskName, _settings.ProjectNamePattern);
-            var taskName = Regex.Replace(asanaTaskName, _settings.TaskNameReplacePattern, string.Empty);
+            var taskName = Regex.Match(asanaTaskName, _settings.TaskNamePattern);
             var customFieldKey = req.Headers.GetValues(AsanaCustomFieldKey).First();
             var customFieldValue = req.Headers.GetValues(AsanaCustomFieldValue).First();
 
             await _updateAsanaTaskCustomFieldUseCase.UpdateTaskCustomFieldAsync(_settings.WorkspaceId,
                                                                                 projectName.Value,
-                                                                                taskName,
+                                                                                taskName.Value,
                                                                                 customFieldKey,
                                                                                 customFieldValue,
                                                                                 CancellationToken.None);
@@ -115,7 +161,7 @@ namespace Thinklogic.Integration.Functions.WebHooks
             }
 
             var projectName = Regex.Match(asanaTaskName, _settings.ProjectNamePattern);
-            var taskName = Regex.Replace(asanaTaskName, _settings.TaskNameReplacePattern, string.Empty);
+            var taskName = Regex.Match(asanaTaskName, _settings.TaskNamePattern);
 
             var pathToIdentifyComment = req.Headers.GetValues(AsanaCommentPath).First();
             var taskComment = parsed.SelectToken(pathToIdentifyComment).Value<string>();
@@ -126,7 +172,7 @@ namespace Thinklogic.Integration.Functions.WebHooks
 
             AsanaCommentResultDto commentResult = await _insertCommentAsanaTaskUseCase.InsertCommentAsync(_settings.WorkspaceId,
                                                                                                           projectName.Value,
-                                                                                                          taskName,
+                                                                                                          taskName.Value,
                                                                                                           taskComment);
 
             log.LogInformation($"Comment made in Workspace {_settings.WorkspaceId}.");
