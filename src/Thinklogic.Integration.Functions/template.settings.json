@@ -6,6 +6,7 @@
     "AsanaPersonalAccessToken": "ValidAccessToken",
     "UrlAsana": "https://app.asana.com/api/1.0/",
     "WorkspaceId": "ValidWorkspaceId",
+    "ProjectNamePattern": "(?<=\\[).*?(?=\\])",
     "TaskNamePattern": "(?<=\\[.+\\]).*",
     "MultiTaskNamePattern": "(?<=Task:).*"
   }

@@ -73,7 +73,7 @@ namespace Thinklogic.Integration.Functions.WebHooks
 
                 string projectName = Regex.Match(asanaProjectName, _settings.ProjectNamePattern).Value;
                 string taskName = Regex.Match(asanaTaskName, _settings.TaskNamePattern).Value;
-                string asanaCustomFieldValue = parsed.SelectToken(parameters.AsanaCustomFieldValue)?.Value<string>() ?? parameters.AsanaCustomFieldValue;
+                string asanaCustomFieldValue = GetAsanaCustomFieldValue(parameters, parsed);
 
                 await _updateAsanaTaskCustomFieldUseCase.UpdateTaskCustomFieldAsync(_settings.WorkspaceId,
                                                                                     projectName,
@@ -84,7 +84,7 @@ namespace Thinklogic.Integration.Functions.WebHooks
 
                 log.LogInformation($"Custom Field Updated made in Workspace {_settings.WorkspaceId}.");
 
-                return new OkObjectResult(Result<string>.Success(default));
+                return new OkObjectResult(Result<string>.Success($"Custom Field Updated made in Workspace {_settings.WorkspaceId}.\nProject: {projectName}\nTask: {taskName}"));
             }
             catch (Exception ex)
             {
@@ -132,7 +132,7 @@ namespace Thinklogic.Integration.Functions.WebHooks
 
                 string projectName = Regex.Match(asanaProjectName, _settings.ProjectNamePattern).Value;
                 IEnumerable<string> tasksName = Regex.Matches(asanaTaskName, _settings.MultiTaskNamePattern).Select(x => x.Value.Trim());
-                string asanaCustomFieldValue = parsed.SelectToken(parameters.AsanaCustomFieldValue)?.Value<string>() ?? parameters.AsanaCustomFieldValue;
+                string asanaCustomFieldValue = GetAsanaCustomFieldValue(parameters, parsed);
 
                 await _updateAsanaTaskCustomFieldUseCase.UpdateTasksCustomFieldAsync(_settings.WorkspaceId,
                                                                                      projectName,
@@ -213,6 +213,18 @@ namespace Thinklogic.Integration.Functions.WebHooks
             }
         }
 
+        private static string GetAsanaCustomFieldValue(FunctionParameters parameters, JObject parsed)
+        {
+            try
+            {
+                return parsed.SelectToken(parameters.AsanaCustomFieldValue)?.Value<string>() ?? parameters.AsanaCustomFieldValue;
+            }
+            catch
+            {
+                return parameters.AsanaCustomFieldValue;
+            }
+        }
+
         private static IActionResult ReturnInvalidOperation(string message)
         {
             var result = Result<string>.Invalid(new List<ValidationError> { new ValidationError { ErrorMessage = message } });
@@ -238,7 +250,7 @@ namespace Thinklogic.Integration.Functions.WebHooks
             {
                 if (string.IsNullOrWhiteSpace(headerKey))
                 {
-                    validations.Add(new ValidationError { ErrorMessage = $"{headerKey} was not found inside the header.", Identifier = headerKey });
+                    validations.Add(new ValidationError { ErrorMessage = $"Some data were not found inside the header." });
                 }
             }
 
