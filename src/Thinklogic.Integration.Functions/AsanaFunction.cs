@@ -6,7 +6,6 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 using System.Net.Http;
 using System.Text.RegularExpressions;
@@ -39,150 +38,179 @@ namespace Thinklogic.Integration.Functions.WebHooks
         public async Task<IActionResult> UpdateAsanaTaskCustomField([HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestMessage req,
                                                                     ILogger log)
         {
-            log.LogInformation("C# HTTP trigger function processed a request.");
-            FunctionParameters parameters = BuildFunctionParameters(req);
-            Result<bool> result = ValidateParameters(parameters.AsanaTitlePath,
-                                                     parameters.AsanaCustomFieldKey,
-                                                     parameters.AsanaCustomFieldValue);
-            if (!result.IsSuccess)
+            try
             {
-                return new OkObjectResult(result);
+                log.LogInformation("C# HTTP trigger function processed a request.");
+                FunctionParameters parameters = new FunctionParameters(req);
+                Result<bool> result = ValidateParameters(parameters.AsanaProjectPath,
+                                                         parameters.AsanaTaskPath,
+                                                         parameters.AsanaCustomFieldKey,
+                                                         parameters.AsanaCustomFieldValue);
+                if (!result.IsSuccess)
+                {
+                    return new OkObjectResult(result);
+                }
+
+                string payload = HttpUtility.HtmlDecode(await req.Content.ReadAsStringAsync());
+                JObject parsed = JObject.Parse(payload);
+
+                if (!ShouldProcess(req, parsed))
+                {
+                    return new OkObjectResult(Result<string>.Success(default, "It wasn't necessary to process."));
+                }
+
+                string asanaProjectName = parsed.SelectToken(parameters.AsanaProjectPath).Value<string>();
+                if (string.IsNullOrEmpty(asanaProjectName))
+                {
+                    return ReturnInvalidOperation("Invalid Path to get the Asana Project.");
+                }
+
+                string asanaTaskName = parsed.SelectToken(parameters.AsanaTaskPath).Value<string>();
+                if (string.IsNullOrEmpty(asanaTaskName))
+                {
+                    return ReturnInvalidOperation("Invalid Path to get the Asana Task.");
+                }
+
+                string projectName = Regex.Match(asanaProjectName, _settings.ProjectNamePattern).Value;
+                string taskName = Regex.Match(asanaTaskName, _settings.TaskNamePattern).Value;
+                string asanaCustomFieldValue = parsed.SelectToken(parameters.AsanaCustomFieldValue)?.Value<string>() ?? parameters.AsanaCustomFieldValue;
+
+                await _updateAsanaTaskCustomFieldUseCase.UpdateTaskCustomFieldAsync(_settings.WorkspaceId,
+                                                                                    projectName,
+                                                                                    taskName,
+                                                                                    parameters.AsanaCustomFieldKey,
+                                                                                    asanaCustomFieldValue,
+                                                                                    CancellationToken.None);
+
+                log.LogInformation($"Custom Field Updated made in Workspace {_settings.WorkspaceId}.");
+
+                return new OkObjectResult(Result<string>.Success(default));
             }
-
-            string payload = HttpUtility.HtmlDecode(await req.Content.ReadAsStringAsync());
-            JObject parsed = JObject.Parse(payload);
-
-            if (!ShouldProcess(req, parsed))
+            catch (Exception ex)
             {
-                return new OkObjectResult(Result<string>.Success(default, "It wasn't necessary to process."));
+                log.LogError("Error updating asana custom field task.", ex);
+                return ReturnInvalidOperation(ex.Message);
             }
-
-            string asanaTaskName = parsed.SelectToken(parameters.AsanaTitlePath).Value<string>();
-            if (string.IsNullOrEmpty(asanaTaskName))
-            {
-                return ReturnInvalidOperation("Invalid Path to get the Asana Task.");
-            }
-
-            string projectName = Regex.Match(asanaTaskName, _settings.ProjectNamePattern).Value;
-            string taskName = Regex.Match(asanaTaskName, _settings.TaskNamePattern).Value;
-            string asanaCustomFieldValue = parsed.SelectToken(parameters.AsanaCustomFieldValue)?.Value<string>() ?? parameters.AsanaCustomFieldValue;
-
-            await _updateAsanaTaskCustomFieldUseCase.UpdateTaskCustomFieldAsync(_settings.WorkspaceId,
-                                                                                projectName,
-                                                                                taskName,
-                                                                                parameters.AsanaCustomFieldKey,
-                                                                                asanaCustomFieldValue,
-                                                                                CancellationToken.None);
-
-            log.LogInformation($"Custom Field Updated made in Workspace {_settings.WorkspaceId}.");
-
-            return new OkObjectResult(Result<string>.Success(default));
         }
 
         [FunctionName("UpdateAsanaTasksCustomField")]
         public async Task<IActionResult> UpdateAsanaTasksCustomField([HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestMessage req,
                                                                     ILogger log)
         {
-            log.LogInformation("C# HTTP trigger function processed a request.");
-            FunctionParameters parameters = BuildFunctionParameters(req);
-            Result<bool> result = ValidateParameters(parameters.AsanaTitlePath,
-                                                     parameters.AsanaCustomFieldKey,
-                                                     parameters.AsanaCustomFieldValue);
-            if (!result.IsSuccess)
+            try
             {
-                return new OkObjectResult(result);
+                log.LogInformation("C# HTTP trigger function processed a request.");
+                FunctionParameters parameters = new FunctionParameters(req);
+                Result<bool> result = ValidateParameters(parameters.AsanaProjectPath,
+                                                         parameters.AsanaTaskPath,
+                                                         parameters.AsanaCustomFieldKey,
+                                                         parameters.AsanaCustomFieldValue);
+                if (!result.IsSuccess)
+                {
+                    return new OkObjectResult(result);
+                }
+
+                string payload = HttpUtility.HtmlDecode(await req.Content.ReadAsStringAsync());
+                JObject parsed = JObject.Parse(payload);
+
+                if (!ShouldProcess(req, parsed))
+                {
+                    return new OkObjectResult(Result<string>.Success(default, "It wasn't necessary to process."));
+                }
+
+                string asanaProjectName = parsed.SelectToken(parameters.AsanaProjectPath).Value<string>();
+                if (string.IsNullOrEmpty(asanaProjectName))
+                {
+                    return ReturnInvalidOperation("Invalid Path to get the Asana Project.");
+                }
+
+                string asanaTaskName = parsed.SelectToken(parameters.AsanaTaskPath).Value<string>();
+                if (string.IsNullOrEmpty(asanaTaskName))
+                {
+                    return ReturnInvalidOperation("Invalid Path to get the Asana Task.");
+                }
+
+                string projectName = Regex.Match(asanaProjectName, _settings.ProjectNamePattern).Value;
+                IEnumerable<string> tasksName = Regex.Matches(asanaTaskName, _settings.MultiTaskNamePattern).Select(x => x.Value.Trim());
+                string asanaCustomFieldValue = parsed.SelectToken(parameters.AsanaCustomFieldValue)?.Value<string>() ?? parameters.AsanaCustomFieldValue;
+
+                await _updateAsanaTaskCustomFieldUseCase.UpdateTasksCustomFieldAsync(_settings.WorkspaceId,
+                                                                                     projectName,
+                                                                                     tasksName,
+                                                                                     parameters.AsanaCustomFieldKey,
+                                                                                     asanaCustomFieldValue,
+                                                                                     CancellationToken.None);
+
+                log.LogInformation($"Custom Fields Updated made in Workspace {_settings.WorkspaceId}.");
+
+                return new OkObjectResult(Result<string>.Success(default));
             }
-
-            string payload = HttpUtility.HtmlDecode(await req.Content.ReadAsStringAsync());
-            JObject parsed = JObject.Parse(payload);
-
-            if (!ShouldProcess(req, parsed))
+            catch (Exception ex)
             {
-                return new OkObjectResult(Result<string>.Success(default, "It wasn't necessary to process."));
+                log.LogError("Error updating asana custom field task.", ex);
+                return ReturnInvalidOperation(ex.Message);
             }
-
-            string asanaTaskName = parsed.SelectToken(parameters.AsanaTitlePath).Value<string>();
-            if (string.IsNullOrEmpty(asanaTaskName))
-            {
-                return ReturnInvalidOperation("Invalid Path to get the Asana Task.");
-            }
-
-            string projectName = Regex.Match(asanaTaskName, _settings.ProjectNamePattern).Value;
-            IEnumerable<string> tasksName = Regex.Matches(asanaTaskName, _settings.MultiTaskNamePattern).Select(x => x.Value.Trim());
-            string asanaCustomFieldValue = parsed.SelectToken(parameters.AsanaCustomFieldValue)?.Value<string>() ?? parameters.AsanaCustomFieldValue;
-
-            await _updateAsanaTaskCustomFieldUseCase.UpdateTasksCustomFieldAsync(_settings.WorkspaceId,
-                                                                                 projectName,
-                                                                                 tasksName,
-                                                                                 parameters.AsanaCustomFieldKey,
-                                                                                 asanaCustomFieldValue,
-                                                                                 CancellationToken.None);
-
-            log.LogInformation($"Custom Fields Updated made in Workspace {_settings.WorkspaceId}.");
-
-            return new OkObjectResult(Result<string>.Success(default));
         }
 
         [FunctionName("UpdateAsanaTaskWithComment")]
         public async Task<IActionResult> UpdateAsanaTaskWithComment([HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestMessage req,
                                                                     ILogger log)
         {
-            log.LogInformation("C# HTTP trigger function processed a request.");
-            FunctionParameters parameters = BuildFunctionParameters(req);
-            Result<bool> result = ValidateParameters(parameters.AsanaTitlePath,
-                                                     parameters.AsanaCommentPath);
-            if (!result.IsSuccess)
+            try
             {
-                return new OkObjectResult(result);
-            }
-
-            string payload = HttpUtility.HtmlDecode(await req.Content.ReadAsStringAsync());
-            JObject parsed = JObject.Parse(payload);
-
-            if (!ShouldProcess(req, parsed))
-            {
-                return new OkObjectResult(Result<string>.Success(default, "It wasn't necessary to process."));
-            }
-
-            string asanaTaskName = parsed.SelectToken(parameters.AsanaTitlePath).Value<string>();
-            if (string.IsNullOrEmpty(asanaTaskName))
-            {
-                return ReturnInvalidOperation("Invalid Path to get the Asana Task.");
-            }
-
-            string projectName = Regex.Match(asanaTaskName, _settings.ProjectNamePattern).Value;
-            string taskName = Regex.Match(asanaTaskName, _settings.TaskNamePattern).Value;
-
-            string taskComment = parsed.SelectToken(parameters.AsanaCommentPath).Value<string>();
-            if (string.IsNullOrEmpty(taskComment))
-            {
-                return ReturnInvalidOperation("Invalid Path to get the Comment Task.");
-            }
-
-            AsanaCommentResultDto commentResult = await _insertCommentAsanaTaskUseCase.InsertCommentAsync(_settings.WorkspaceId,
-                                                                                                          projectName,
-                                                                                                          taskName,
-                                                                                                          taskComment);
-
-            log.LogInformation($"Comment made in Workspace {_settings.WorkspaceId}.");
-
-            return new OkObjectResult(Result<AsanaCommentResultDto>.Success(commentResult));
-        }
-
-        private static FunctionParameters BuildFunctionParameters(HttpRequestMessage req)
-        {
-            var functionParameters = new FunctionParameters();
-            foreach (var parameter in functionParameters.GetType().GetProperties())
-            {
-                DescriptionAttribute key = (DescriptionAttribute)Attribute.GetCustomAttribute(parameter, typeof(DescriptionAttribute));
-                if (req.Headers.Contains(key.Description))
+                log.LogInformation("C# HTTP trigger function processed a request.");
+                FunctionParameters parameters = new FunctionParameters(req);
+                Result<bool> result = ValidateParameters(parameters.AsanaProjectPath,
+                                                         parameters.AsanaTaskPath,
+                                                         parameters.AsanaCommentPath);
+                if (!result.IsSuccess)
                 {
-                    var value = req.Headers.GetValues(key.Description).First();
-                    parameter.SetValue(functionParameters, value);
+                    return new OkObjectResult(result);
                 }
-            }
 
-            return functionParameters;
+                string payload = HttpUtility.HtmlDecode(await req.Content.ReadAsStringAsync());
+                JObject parsed = JObject.Parse(payload);
+
+                if (!ShouldProcess(req, parsed))
+                {
+                    return new OkObjectResult(Result<string>.Success(default, "It wasn't necessary to process."));
+                }
+
+                string asanaProjectName = parsed.SelectToken(parameters.AsanaProjectPath).Value<string>();
+                if (string.IsNullOrEmpty(asanaProjectName))
+                {
+                    return ReturnInvalidOperation("Invalid Path to get the Asana Project.");
+                }
+
+                string asanaTaskName = parsed.SelectToken(parameters.AsanaTaskPath).Value<string>();
+                if (string.IsNullOrEmpty(asanaTaskName))
+                {
+                    return ReturnInvalidOperation("Invalid Path to get the Asana Task.");
+                }
+
+                string projectName = Regex.Match(asanaProjectName, _settings.ProjectNamePattern).Value;
+                string taskName = Regex.Match(asanaTaskName, _settings.TaskNamePattern).Value;
+
+                string taskComment = parsed.SelectToken(parameters.AsanaCommentPath).Value<string>();
+                if (string.IsNullOrEmpty(taskComment))
+                {
+                    return ReturnInvalidOperation("Invalid Path to get the Comment Task.");
+                }
+
+                AsanaCommentResultDto commentResult = await _insertCommentAsanaTaskUseCase.InsertCommentAsync(_settings.WorkspaceId,
+                                                                                                              projectName,
+                                                                                                              taskName,
+                                                                                                              taskComment);
+
+                log.LogInformation($"Comment made in Workspace {_settings.WorkspaceId}.");
+
+                return new OkObjectResult(Result<AsanaCommentResultDto>.Success(commentResult));
+            }
+            catch (Exception ex)
+            {
+                log.LogError("Error updating asana custom field task.", ex);
+                return ReturnInvalidOperation(ex.Message);
+            }
         }
 
         private static IActionResult ReturnInvalidOperation(string message)
