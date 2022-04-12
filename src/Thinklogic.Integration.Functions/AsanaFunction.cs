@@ -54,7 +54,7 @@ namespace Thinklogic.Integration.Functions.WebHooks
                 string payload = HttpUtility.HtmlDecode(await req.Content.ReadAsStringAsync());
                 JObject parsed = JObject.Parse(payload);
 
-                if (!ShouldProcess(req, parsed))
+                if (!ShouldProcess(parameters, parsed))
                 {
                     return new OkObjectResult(Result<string>.Success(default, "It wasn't necessary to process."));
                 }
@@ -113,7 +113,7 @@ namespace Thinklogic.Integration.Functions.WebHooks
                 string payload = HttpUtility.HtmlDecode(await req.Content.ReadAsStringAsync());
                 JObject parsed = JObject.Parse(payload);
 
-                if (!ShouldProcess(req, parsed))
+                if (!ShouldProcess(parameters, parsed))
                 {
                     return new OkObjectResult(Result<string>.Success(default, "It wasn't necessary to process."));
                 }
@@ -171,7 +171,7 @@ namespace Thinklogic.Integration.Functions.WebHooks
                 string payload = HttpUtility.HtmlDecode(await req.Content.ReadAsStringAsync());
                 JObject parsed = JObject.Parse(payload);
 
-                if (!ShouldProcess(req, parsed))
+                if (!ShouldProcess(parameters, parsed))
                 {
                     return new OkObjectResult(Result<string>.Success(default, "It wasn't necessary to process."));
                 }
@@ -231,16 +231,10 @@ namespace Thinklogic.Integration.Functions.WebHooks
             return new OkObjectResult(result);
         }
 
-        private static bool ShouldProcess(HttpRequestMessage req, JObject data)
+        private static bool ShouldProcess(FunctionParameters parameters, JObject data)
         {
-            if (!req.Headers.Contains(nameof(FunctionParameters.FilterPath)))
-            {
-                return true;
-            }
-
-            string pathToFilterData = req.Headers.GetValues(nameof(FunctionParameters.FilterPath)).FirstOrDefault();
-            string filterValue = req.Headers.GetValues(nameof(FunctionParameters.FilterValue)).FirstOrDefault();
-            return data.SelectToken(pathToFilterData).Value<string>().Contains(filterValue);
+            return string.IsNullOrWhiteSpace(parameters.FilterPath) ||
+                   data.SelectToken(parameters.FilterPath).Value<string>().Contains(parameters.FilterValue);
         }
 
         private static Result<bool> ValidateParameters(params string[] headerKeys)
