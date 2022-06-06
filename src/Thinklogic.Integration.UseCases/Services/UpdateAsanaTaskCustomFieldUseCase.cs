@@ -99,10 +99,18 @@ namespace Thinklogic.Integration.UseCases.Services
                 return;
             }
 
-            var customFieldValueData = customFieldData.EnumOptions.FirstOrDefault(x => x.Name == customFieldValue);
-            if (customFieldData is null)
+            string customFieldValueData;
+            if (customFieldData.EnumOptions is not null)
             {
-                return;
+                customFieldValueData = customFieldData.EnumOptions.FirstOrDefault(x => x.Name == customFieldValue).Gid;
+                if (customFieldData is null)
+                {
+                    return;
+                }
+            }
+            else
+            {
+                customFieldValueData = customFieldValue;
             }
 
             var projects = await _asanaProjectsGateway.GetProjectsAsync(workspaceId, CancellationToken.None);
@@ -124,7 +132,7 @@ namespace Thinklogic.Integration.UseCases.Services
                 }
 
                 await _asanaTasksGateway.UpdateCustomFieldAsync(taskRelated.Gid,
-                                                                new AsanaCustomFieldRequest(customFieldData.Gid, customFieldValueData.Gid),
+                                                                new AsanaCustomFieldRequest(customFieldData.Gid, customFieldValueData),
                                                                 ct);
             }
         }
