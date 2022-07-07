@@ -22,7 +22,7 @@ namespace Thinklogic.Integration.Infrastructure.Gateways.Asana
             var result = await SendGetRequest<AsanaData<IEnumerable<AsanaCustomFieldResponse>>>(url, ct);
 
             return result.Data != null && result.Data.Any() ?
-                   result.Data.FirstOrDefault(x => x.Name == customFieldKey) :
+                   result.Data.FirstOrDefault(x => x.Name.ToLowerInvariant() == customFieldKey.ToLowerInvariant()) :
                    default;
         }
 
@@ -34,8 +34,8 @@ namespace Thinklogic.Integration.Infrastructure.Gateways.Asana
             string url = $"{Client}/{workspaceGid}/tasks/search?projects.any={projectGid}&text={taskName}&completed=false";
             var result = await SendGetRequest<AsanaData<IEnumerable<AsanaTaskResponse>>>(url, ct);
 
-            return result.Data != null && result.Data.Any(x => x.Name == taskName) ?
-                   result.Data.First(x => x.Name == taskName) :
+            return result.Data != null && result.Data.Any(x => x.Name.ToLowerInvariant() == taskName.ToLowerInvariant()) ?
+                   result.Data.First(x => x.Name.ToLowerInvariant() == taskName.ToLowerInvariant()) :
                    default;
         }
     }
